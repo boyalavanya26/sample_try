@@ -4,18 +4,14 @@ FROM python:3.10-slim
 # Set the working directory in the container
 WORKDIR /app
 
-# Copy the current directory contents into the container
+# Copy all project files into the container
 COPY . /app
 
-# Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Install required Python packages manually
+RUN pip install --no-cache-dir flask openai
 
-# Expose the port the app runs on
+# Expose the port your app runs on
 EXPOSE 5000
 
-# Define environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-
-# Run the application
+# Run the application (update if your entry point is different)
 CMD ["python", "app.py"]
