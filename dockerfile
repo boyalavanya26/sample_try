@@ -1,17 +1,17 @@
 # Use an official Python runtime as a parent image
 FROM python:3.10-slim
 
-# Set the working directory in the container
+# Set the working directory
 WORKDIR /app
 
-# Copy all project files into the container
+# Copy the current directory contents into the container
 COPY . /app
 
-# Install required Python packages manually
-RUN pip install --no-cache-dir flask openai
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Expose the port your app runs on
+# Expose port (if it's a web app)
 EXPOSE 5000
 
-# Run the application (update if your entry point is different)
+# Run the application
 CMD ["python", "app.py"]
