@@ -1,21 +1,21 @@
-# Use official Node.js LTS image
-FROM node:18
+# Use an official Python runtime as a parent image
+FROM python:3.10-slim
 
-# Set working directory
+# Set the working directory in the container
 WORKDIR /app
 
-# Copy package files and install dependencies
-COPY package*.json ./
-RUN npm install
+# Copy the current directory contents into the container
+COPY . /app
 
-# Copy the rest of the application code
-COPY . .
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Expose the port (default to 3000 if not set)
-EXPOSE 3000
+# Expose the port the app runs on
+EXPOSE 5000
 
-# Set environment variables (optional)
-ENV NODE_ENV=production
+# Define environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
 
-# Start the application
-CMD ["node", "server.js"]
+# Run the application
+CMD ["python", "app.py"]
