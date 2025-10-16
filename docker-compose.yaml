@@ -7,10 +7,6 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      # - EMAIL_SERVICE=gmail
-      # - EMAIL_USER=your-email@gmail.com
-      # - EMAIL_PASSWORD=your-app-password
-      # - EMAIL_FROM=your-email@gmail.com
       - DEVELOPMENT_MODE=true
     depends_on:
       - mongo

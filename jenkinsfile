@@ -1,14 +1,8 @@
 pipeline {
   agent any
 
-  options {
-    timestamps()
-    ansiColor('xterm')
-    buildDiscarder(logRotator(numToKeepStr: '10'))
-  }
-
   triggers {
-    githubPush() // Trigger Jenkins on GitHub push
+    githubPush()  // Trigger Jenkins on GitHub push
   }
 
   parameters {
@@ -20,14 +14,14 @@ pipeline {
     ECR_REPO = '636768524979.dkr.ecr.eu-central-2.amazonaws.com/lavanya-jenkins-repo'
     AWS_REGION = 'eu-central-2'
     CLUSTER_NAME = 'lavanya-test-cluster'
-    BRANCH_NAME = 'main'
+    BRANCH_NAME = 'main' // Static value for branch
   }
 
   stages {
     stage('Checkout Code') {
       steps {
         script {
-          git branch: env.BRANCH_NAME, url: 'https://github.com/boyalavanya26/sample_try.git'
+          git branch: "${BRANCH_NAME}", url: 'https://github.com/boyalavanya26/sample_try.git'
         }
       }
     }
@@ -80,7 +74,6 @@ pipeline {
         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws_credentials']]) {
           script {
             def deploymentYaml = """
-# --- Kubernetes YAML ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -206,7 +199,7 @@ spec:
             writeFile file: 'kube-deploy.yaml', text: deploymentYaml
             sh """
               aws eks update-kubeconfig --region ${env.AWS_REGION} --name ${env.CLUSTER_NAME}
-              retry 3 kubectl apply -f kube-deploy.yaml
+              kubectl apply -f kube-deploy.yaml
             """
           }
         }
@@ -217,10 +210,8 @@ spec:
       steps {
         script {
           sh '''
-          set +e
           kubectl run mongo-client --rm -i --image=mongo -- \
           mongosh "mongodb://speakease-mongo:27017" --eval 'db.getSiblingDB("authdb").users.find().limit(5).pretty()'
-          set -e
           '''
         }
       }
@@ -232,7 +223,7 @@ spec:
       echo "✅ Deployment and MongoDB automation successful!"
     }
     failure {
-      echo "❌ Deployment failed. Please check logs for details."
+      echo "❌ Deployment failed. Check logs for details."
     }
   }
 }
