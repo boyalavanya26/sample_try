@@ -1,28 +1,25 @@
 pipeline {
   agent any
-  
   triggers {
-    githubPush()  // ✅ This enables GitHub webhook trigger
+    githubPush()  // Trigger Jenkins on GitHub push
   }
 
-  
   parameters {
-    string(name: 'IMAGE_TAG', defaultValue: 'latest', description: 'Capstone-Image')
+    string(name: 'IMAGE_TAG', defaultValue: 'latest', description: 'Docker image tag')
   }
-
-
 
   environment {
     DOCKER_HUB_REPO = 'lavanyaboya/cap-speakease'
     ECR_REPO = '636768524979.dkr.ecr.eu-central-2.amazonaws.com/lavanya-jenkins-repo'
     AWS_REGION = 'eu-central-2'
     CLUSTER_NAME = 'lavanya-test-cluster'
+    BRANCH_NAME = env.BRANCH_NAME ?: 'main'
   }
 
   stages {
     stage('Checkout Code') {
       steps {
-        git branch: 'main', url: 'https://github.com/boyalavanya26/sample_try.git'
+        git branch: "${BRANCH_NAME}", url: 'https://github.com/boyalavanya26/sample_try.git'
       }
     }
 
@@ -69,7 +66,7 @@ pipeline {
       }
     }
 
-    stage('Deploy  Kubernetes') {
+    stage('Deploy to Kubernetes') {
       steps {
         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws_credentials']]) {
           script {
@@ -199,12 +196,20 @@ spec:
             writeFile file: 'kube-deploy.yaml', text: deploymentYaml
             sh """
               aws eks update-kubeconfig --region ${env.AWS_REGION} --name ${env.CLUSTER_NAME}
-              kubectl delete deployment speakease-backend --ignore-not-found
-              kubectl delete deployment speakease-frontend --ignore-not-found
-              kubectl delete deployment speakease-mongo --ignore-not-found
               kubectl apply -f kube-deploy.yaml
             """
           }
+        }
+      }
+    }
+
+    stage('MongoDB Automation') {
+      steps {
+        script {
+          sh '''
+          kubectl run mongo-client --rm -i --image=mongo -- \
+          mongosh "mongodb://speakease-mongo:27017" --eval 'db.getSiblingDB("authdb").users.find().limit(5).pretty()'
+          '''
         }
       }
     }
@@ -212,7 +217,7 @@ spec:
 
   post {
     success {
-      echo "✅ Kubernetes deployment successful!"
+      echo "✅ Deployment and MongoDB automation successful!"
     }
     failure {
       echo "❌ Deployment failed. Check logs for details."
