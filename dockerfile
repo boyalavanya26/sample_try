@@ -1,17 +1,8 @@
-# Use an official Python runtime as a parent image
-FROM python:3.10-slim
-
-# Set the working directory
+FROM node:18-apline AS base
 WORKDIR /app
-
-# Copy the current directory contents into the container
-COPY . /app
-
-# Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Expose port (if it's a web app)
-EXPOSE 5000
-
-# Run the application
-CMD ["python", "app.py"]
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+EXPOSE 3000
+ENV NODE_ENV=production
+CMD ["node","server.js"]
