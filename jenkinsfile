@@ -225,7 +225,7 @@ spec:
             echo "✅ Deployment and MongoDB automation successful!"
         }
         failure {
-            echo "❌ Deployment failed. Check logs for more details."
+            echo "❌ Deployment failed. Check logs forr more details."
         }
     }
 }
