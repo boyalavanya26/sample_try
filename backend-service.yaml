@@ -3,7 +3,7 @@ kind: Service
 metadata:
   name: speakease-backend-service
 spec:
-  type: NodePort
+  type: LoadBalancer
   selector:
     app: speakease-backend
   ports:
