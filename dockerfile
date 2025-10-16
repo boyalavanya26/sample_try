@@ -1,8 +1,7 @@
 FROM node:18
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm install dd-trace && npm install
 COPY . .
 EXPOSE 3000
-ENV NODE_ENV=production
 CMD ["node","server.js"]
