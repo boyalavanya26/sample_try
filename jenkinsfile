@@ -19,11 +19,11 @@ pipeline {
 
     DOCKER_HUB_REPO = 'lavanyaboya/cap-speakease'
 
-    ECR_REPO = '636768524979.dkr.ecr.eu-central-2.amazonaws.com/lavanya-jenkins-repo'
+    ECR_REPO = '636768524979.dkr.ecr.eu-central-2.amazonaws.com/capstone'
 
     AWS_REGION = 'eu-central-2'
 
-    CLUSTER_NAME = 'lavanya-test-cluster'
+    CLUSTER_NAME = 'SpeakEase-cluster'
 
   }
  
