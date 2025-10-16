@@ -65,7 +65,7 @@ pipeline {
       }
     }
 
-    stage('Deploy to Kubernetes') {
+    stage('Deploy  Kubernetes') {
       steps {
         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws_credentials']]) {
           script {
