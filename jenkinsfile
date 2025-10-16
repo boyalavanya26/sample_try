@@ -220,7 +220,7 @@ spec:
 
   post {
     success {
-      echo "✅ Deployment and MongoDB automation successful!"
+      echo "✅ Deployment and MongoDB automation successfully completed!"
     }
     failure {
       echo "❌ Deployment failed. Check logs for details."
