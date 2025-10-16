@@ -399,7 +399,7 @@ spec:
 
     success {
 
-      echo "✅ Kubernetes deployment successful!"
+      echo "✅ Kubernetes deployment successfully completed!"
 
     }
 
