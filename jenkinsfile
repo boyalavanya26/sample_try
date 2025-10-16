@@ -5,6 +5,10 @@ pipeline {
     githubPush()  // ✅ This enables GitHub webhook trigger
   }
 
+  
+  parameters {
+    string(name: 'IMAGE_TAG', defaultValue: 'latest', description: 'Capstone-Image')
+  }
 
 
 
