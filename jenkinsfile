@@ -1,5 +1,6 @@
 pipeline {
   agent any
+
   triggers {
     githubPush()  // Trigger Jenkins on GitHub push
   }
@@ -13,13 +14,16 @@ pipeline {
     ECR_REPO = '636768524979.dkr.ecr.eu-central-2.amazonaws.com/lavanya-jenkins-repo'
     AWS_REGION = 'eu-central-2'
     CLUSTER_NAME = 'lavanya-test-cluster'
-    BRANCH_NAME = env.BRANCH_NAME ?: 'main'
+    BRANCH_NAME = 'main'  // Static value for environment
   }
 
   stages {
     stage('Checkout Code') {
       steps {
-        git branch: "${BRANCH_NAME}", url: 'https://github.com/boyalavanya26/sample_try.git'
+        script {
+          def branch = env.BRANCH_NAME ?: 'main'  // Dynamic logic here
+          git branch: branch, url: 'https://github.com/boyalavanya26/sample_try.git'
+        }
       }
     }
 
@@ -220,7 +224,7 @@ spec:
       echo "✅ Deployment and MongoDB automation successful!"
     }
     failure {
-      echo "❌ Deployment failed.Please check logs for details."
+      echo "❌ Deployment failed. Check logs for details."
     }
   }
 }
