@@ -1,81 +1,77 @@
 pipeline {
-  agent any
+    agent any
 
-  triggers {
-    githubPush()  // Trigger Jenkins on GitHub push
-  }
+    triggers {
+        githubPush() // Trigger Jenkins on GitHub push
+    }
 
-  parameters {
-    string(name: 'IMAGE_TAG', defaultValue: 'latest', description: 'Docker image tag')
-  }
+    parameters {
+        string(name: 'IMAGE_TAG', defaultValue: 'latest', description: 'Docker image tag')
+    }
 
-  environment {
-    DOCKER_HUB_REPO = 'lavanyaboya/cap-speakease'
-    ECR_REPO = '636768524979.dkr.ecr.eu-central-2.amazonaws.com/lavanya-jenkins-repo'
-    AWS_REGION = 'eu-central-2'
-    CLUSTER_NAME = 'lavanya-test-cluster'
-    BRANCH_NAME = 'main'
-  }
+    environment {
+        DOCKER_HUB_REPO = 'lavanyaboya/cap-speakease'
+        ECR_REPO = '636768524979.dkr.ecr.eu-central-2.amazonaws.com/lavanya-jenkins-repo'
+        AWS_REGION = 'eu-central-2'
+        CLUSTER_NAME = 'lavanya-test-cluster'
+        BRANCH_NAME = 'main'
+    }
 
-  stages {
-    stage('Checkout Code') {
-      steps {
-        script {
-          git branch: "${BRANCH_NAME}", url: 'https://github.com/boyalavanya26/sample_try.git'
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git branch: "${BRANCH_NAME}", url: 'https://github.com/boyalavanya26/sample_try.git'
+            }
         }
-      }
-    }
 
-    stage('Build Docker Image') {
-      steps {
-        sh "docker build -t ${DOCKER_HUB_REPO}:${params.IMAGE_TAG} ."
-      }
-    }
-
-    stage('Login to Docker Hub') {
-      steps {
-        withCredentials([usernamePassword(credentialsId: 'Docker_credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-          sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+        stage('Build Docker Image') {
+            steps {
+                sh "docker build -t ${DOCKER_HUB_REPO}:${params.IMAGE_TAG} ."
+            }
         }
-      }
-    }
 
-    stage('Push to Docker Hub') {
-      steps {
-        sh "docker push ${DOCKER_HUB_REPO}:${params.IMAGE_TAG}"
-      }
-    }
-
-    stage('Login to AWS ECR') {
-      steps {
-        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws_credentials']]) {
-          sh '''
-            export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-            export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-            aws ecr get-login-password --region $AWS_REGION | \
-            docker login --username AWS --password-stdin $ECR_REPO
-          '''
+        stage('Login to Docker Hub') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'Docker_credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+                }
+            }
         }
-      }
-    }
 
-    stage('Tag and Push to ECR') {
-      steps {
-        script {
-          def ecrImage = "${env.ECR_REPO}:${params.IMAGE_TAG}"
-          sh """
-            docker tag ${DOCKER_HUB_REPO}:${params.IMAGE_TAG} ${ecrImage}
-            docker push ${ecrImage}
-          """
+        stage('Push to Docker Hub') {
+            steps {
+                sh "docker push ${DOCKER_HUB_REPO}:${params.IMAGE_TAG}"
+            }
         }
-      }
-    }
 
-    stage('Deploy to Kubernetes') {
-      steps {
-        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws_credentials']]) {
-          script {
-            def deploymentYaml = """
+        stage('Login to AWS ECR') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws_credentials']]) {
+                    sh '''
+                        aws ecr get-login-password --region $AWS_REGION | \
+                        docker login --username AWS --password-stdin $ECR_REPO
+                    '''
+                }
+            }
+        }
+
+        stage('Tag and Push to ECR') {
+            steps {
+                script {
+                    def ecrImage = "${env.ECR_REPO}:${params.IMAGE_TAG}"
+                    sh """
+                        docker tag ${DOCKER_HUB_REPO}:${params.IMAGE_TAG} ${ecrImage}
+                        docker push ${ecrImage}
+                    """
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws_credentials']]) {
+                    script {
+                        def deploymentYaml = """
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -198,36 +194,38 @@ spec:
     targetPort: 27017
   type: ClusterIP
 """
-            writeFile file: 'kube-deploy.yaml', text: deploymentYaml
-            sh """
-              export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-              export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-              aws eks update-kubeconfig --region ${AWS_REGION} --name ${CLUSTER_NAME}
-              kubectl apply -f kube-deploy.yaml
-            """
-          }
+                        writeFile file: 'kube-deploy.yaml', text: deploymentYaml
+                        sh '''
+                            if ! command -v kubectl &> /dev/null; then
+                                echo "Installing kubectl..."
+                                curl -LO "https://dl.k8s.io/release/$(curl -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+                                chmod +x kubectl
+                                sudo mv kubectl /usr/local/bin/
+                            fi
+                            aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
+                            kubectl apply -f kube-deploy.yaml
+                        '''
+                    }
+                }
+            }
         }
-      }
+
+        stage('MongoDB Automation') {
+            steps {
+                sh '''
+                    kubectl run mongo-client --rm -i --image=mongo -- \
+                    mongosh "mongodb://speakease-mongo:27017" --eval 'db.getSiblingDB("authdb").users.find().limit(5).pretty()'
+                '''
+            }
+        }
     }
 
-    stage('MongoDB Automation') {
-      steps {
-        script {
-          sh '''
-          kubectl run mongo-client --rm -i --image=mongo -- \
-          mongosh "mongodb://speakease-mongo:27017" --eval 'db.getSiblingDB("authdb").users.find().limit(5).pretty()'
-          '''
+    post {
+        success {
+            echo "✅ Deployment and MongoDB automation successful!"
         }
-      }
+        failure {
+            echo "❌ Deployment failed. Check logs for more details."
+        }
     }
-  }
-
-  post {
-    success {
-      echo "✅ Deployment and MongoDB automation successful!"
-    }
-    failure {
-      echo "❌ Deployment failed.Check logs for more details."
-    }
-  }
 }
