@@ -405,7 +405,7 @@ spec:
 
     failure {
 
-      echo "❌ Deployment failed. Check logs for details."
+      echo "❌ Deployment failed.Please check logs for details."
 
     }
 
