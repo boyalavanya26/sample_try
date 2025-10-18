@@ -1,0 +1,241 @@
+apiVersion: apps/v1
+
+kind: Deployment
+
+metadata:
+
+  name: speakease-backend
+
+  labels:
+
+    app: speakease
+
+spec:
+
+  replicas: 1
+
+  selector:
+
+    matchLabels:
+
+      app: speakease
+
+  template:
+
+    metadata:
+
+      labels:
+
+        app: speakease
+
+    spec:
+
+      initContainers:
+
+      - name: wait-for-mongo
+
+        image: busybox
+
+        command: ['sh', '-c', 'until nc -z speakease-mongo 27017; do echo waiting for MongoDB; sleep 5; done;']
+
+      containers:
+
+      - name: speakease-backend
+
+        image: ${ECR_REPO}:${params.IMAGE_TAG}
+
+        ports:
+
+        - containerPort: 3000
+
+        env:
+
+        - name: PORT
+
+          value: "3000"
+
+        - name: MONGODB_AUTH_URI
+
+          value: "mongodb://speakease-mongo:27017/authdb"
+
+        - name: MONGODB_FEEDBACK_URI
+
+          value: "mongodb://speakease-mongo:27017/feedbackDB"
+
+---
+
+apiVersion: v1
+
+kind: Service
+
+metadata:
+
+  name: speakease-backend-service
+
+spec:
+
+  selector:
+
+    app: speakease
+
+  ports:
+
+  - protocol: TCP
+
+    port: 80
+
+    targetPort: 3000
+
+  type: LoadBalancer
+
+---
+
+apiVersion: apps/v1
+
+kind: Deployment
+
+metadata:
+
+  name: speakease-frontend
+
+  labels:
+
+    app: speakease-frontend
+
+spec:
+
+  replicas: 1
+
+  selector:
+
+    matchLabels:
+
+      app: speakease-frontend
+
+  template:
+
+    metadata:
+
+      labels:
+
+        app: speakease-frontend
+
+    spec:
+
+      containers:
+
+      - name: speakease-frontend
+
+        image: nginx:alpine
+
+        ports:
+
+        - containerPort: 80
+
+---
+
+apiVersion: v1
+
+kind: Service
+
+metadata:
+
+  name: speakease-frontend-service
+
+spec:
+
+  selector:
+
+    app: speakease-frontend
+
+  ports:
+
+  - protocol: TCP
+
+    port: 80
+
+    targetPort: 80
+
+  type: LoadBalancer
+
+---
+
+apiVersion: apps/v1
+
+kind: Deployment
+
+metadata:
+
+  name: speakease-mongo
+
+  labels:
+
+    app: mongo
+
+spec:
+
+  replicas: 1
+
+  selector:
+
+    matchLabels:
+
+      app: mongo
+
+  template:
+
+    metadata:
+
+      labels:
+
+        app: mongo
+
+    spec:
+
+      containers:
+
+      - name: mongo
+
+        image: mongo:6.0
+
+        ports:
+
+        - containerPort: 27017
+
+        volumeMounts:
+
+        - name: mongo-data
+
+          mountPath: /data/db
+
+      volumes:
+
+      - name: mongo-data
+
+        emptyDir: {}
+
+---
+
+apiVersion: v1
+
+kind: Service
+
+metadata:
+
+  name: speakease-mongo
+
+spec:
+
+  selector:
+
+    app: mongo
+
+  ports:
+
+  - protocol: TCP
+
+    port: 27017
+
+    targetPort: 27017
+
+  type: ClusterIP
